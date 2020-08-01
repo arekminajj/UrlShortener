@@ -55,7 +55,7 @@ namespace UrlShortener
             {
                 endpoints.MapControllerRoute(
                     name: "default",
-                    pattern: "{controller=Home}/{action=Create}/{id?}");
+                    pattern: "{controller=Urls}/{action=Create}/{id?}");
             });
         }
     }

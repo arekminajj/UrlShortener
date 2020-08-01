@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -19,30 +20,6 @@ namespace UrlShortener.Controllers
             _context = context;
         }
 
-        // GET: Urls
-        public async Task<IActionResult> Index()
-        {
-            return View(await _context.Url.ToListAsync());
-        }
-
-        // GET: Urls/Details/5
-        public async Task<IActionResult> Details(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var url = await _context.Url
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (url == null)
-            {
-                return NotFound();
-            }
-
-            return View(url);
-        }
-
         // GET: Urls/Create
         public IActionResult Create()
         {
@@ -54,100 +31,70 @@ namespace UrlShortener.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,IdString,RedirectUrl")] Url url)
+        public async Task<IActionResult> Create([Bind("Id,RedirectUrl")] Url url)
         {
             if (ModelState.IsValid)
             {
+                string randomString = RandomString(8).ToLower();
+                url.IdString = randomString;
                 _context.Add(url);
                 await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction("ThankYou", new {idString = randomString});
             }
             return View(url);
         }
 
-        // GET: Urls/Edit/5
-        public async Task<IActionResult> Edit(int? id)
+        public IActionResult Get(string idString)
         {
-            if (id == null)
+            if (UrlExists(idString))
             {
-                return NotFound();
+                var url = _context.Url.FirstOrDefault(e => e.IdString == idString);
+                return Redirect(url.RedirectUrl);
             }
-
-            var url = await _context.Url.FindAsync(id);
-            if (url == null)
-            {
-                return NotFound();
-            }
-            return View(url);
+            else
+                return Content("System could not find url");
         }
 
-        // POST: Urls/Edit/5
-        // To protect from overposting attacks, please enable the specific properties you want to bind to, for 
-        // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,IdString,RedirectUrl")] Url url)
+        public IActionResult ThankYou(string idString)
         {
-            if (id != url.Id)
-            {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(url);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!UrlExists(url.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            return View(url);
-        }
-
-        // GET: Urls/Delete/5
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var url = await _context.Url
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (url == null)
-            {
-                return NotFound();
-            }
-
-            return View(url);
-        }
-
-        // POST: Urls/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            var url = await _context.Url.FindAsync(id);
-            _context.Url.Remove(url);
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
+            ViewData["Link"] = "https://localhost:44361/Urls/Get?idString=" + idString;
+            return View();
         }
 
         private bool UrlExists(int id)
         {
             return _context.Url.Any(e => e.Id == id);
+        }
+
+        private bool UrlExists(string idString)
+        {
+            return _context.Url.Any(e => e.IdString == idString);
+        }
+
+        private readonly Random _random = new Random();
+
+      
+        // Generates a random string with a given size.    
+        public string RandomString(int size, bool lowerCase = false)
+        {
+            var builder = new StringBuilder(size);
+
+            // Unicode/ASCII Letters are divided into two blocks
+            // (Letters 65–90 / 97–122):   
+            // The first group containing the uppercase letters and
+            // the second group containing the lowercase.  
+
+            // char is a single Unicode character  
+            char offset = lowerCase ? 'a' : 'A';
+            const int lettersOffset = 26; // A...Z or a..z: length = 26  
+
+            for (var i = 0; i < size; i++)
+            {
+                var @char = (char)_random.Next(offset, offset + lettersOffset);
+                builder.Append(@char);
+            }
+
+            return lowerCase ? builder.ToString().ToLower() : builder.ToString();
         }
     }
 }
